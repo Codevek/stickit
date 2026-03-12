@@ -1,22 +1,70 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import "./App.css"
-
+import { Rnd } from "react-rnd"
+import { invoke } from "@tauri-apps/api/core"
 import type { Note } from "./types/note"
 import { createNote, updateNote, deleteNote, getInitialNotes } from "./store/notesStore"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 
 function App() {
   const [notes, setNotes] = useState<Note[]>(getInitialNotes())
+  const windowLabel = getCurrentWindow().label
+
+  const noteId = windowLabel.startsWith("note_")
+    ? windowLabel.replace("note_", "")
+    : null
+
+  useEffect(() => {
+    if (noteId) {
+      document.body.classList.add('pinned-window')
+    } else {
+      document.body.classList.remove('pinned-window')
+    }
+  }, [noteId])
 
   function handleCreate() {
     setNotes(createNote(notes))
   }
 
   function handleUpdate(id: string, text: string) {
-    setNotes(updateNote(notes, id, text))
+    const updated = updateNote(notes, id, text);
+    setNotes(updated)
+    if (noteId) {
+      localStorage.setItem("stickit_notes", JSON.stringify(updated))
+    }
   }
 
   function handleDelete(id: string) {
     setNotes(deleteNote(notes, id))
+  }
+
+  async function handlePin(note: Note) {
+    await invoke("pin_note", { note })
+  }
+
+  const visibleNotes = noteId
+    ? notes.filter(n => n.id === noteId)
+    : notes
+
+  if (noteId) {
+    const note = visibleNotes[0];
+    if (!note) return null;
+
+    return (
+      <div className="pinned-note-view">
+        <div className="note-container pinned">
+          <div className="drag-zone" data-tauri-drag-region>
+          </div>
+          <textarea
+            value={note.text}
+            onChange={(e) => handleUpdate(note.id, e.target.value)}
+            className="note"
+            placeholder="Write something..."
+          />
+          <div className="note-bottom-pad"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -26,24 +74,76 @@ function App() {
       <button onClick={handleCreate}>+ New Note</button>
 
       <div className="notes">
-        {notes.map(note => (
-          <div key={note.id} className="note-wrapper">
+        {visibleNotes.map((note) => (
+          <Rnd
+            key={note.id}
+            size={{
+              width: note.size?.width ?? 220,
+              height: note.size?.height ?? 160
+            }}
+            position={{
+              x: note.position?.x ?? 100,
+              y: note.position?.y ?? 100
+            }}
+            onDragStop={(_, d) => {
+              const updated = notes.map(n =>
+                n.id === note.id
+                  ? { ...n, position: { x: d.x, y: d.y } }
+                  : n
+              )
 
-            <textarea
-              value={note.text}
-              onChange={(e) => handleUpdate(note.id, e.target.value)}
-              className="note"
-              placeholder="Write something..."
-            />
+              setNotes(updated)
+              localStorage.setItem("stickit_notes", JSON.stringify(updated))
+            }}
+            onResizeStop={(_, __, ref, ___, position) => {
+              const updated = notes.map(n =>
+                n.id === note.id
+                  ? {
+                      ...n,
+                      size: {
+                        width: parseInt(ref.style.width),
+                        height: parseInt(ref.style.height)
+                      },
+                      position
+                    }
+                  : n
+              )
 
-            <button
-              className="delete"
-              onClick={() => handleDelete(note.id)}
-            >
-              delete
-            </button>
+              setNotes(updated)
+              localStorage.setItem("stickit_notes", JSON.stringify(updated))
+            }}
+            dragHandleClassName="drag-zone"
+          >
+            <div className="note-container">
 
-          </div>
+              <div className="drag-zone">
+
+                <button
+                  className="pin-btn"
+                  onClick={() => handlePin(note)}
+                >
+                  📌
+                </button>
+
+                <button
+                  className="delete-btn"
+                  onClick={() => handleDelete(note.id)}
+                >
+                  X
+                </button>
+              </div>
+
+              <textarea
+                value={note.text}
+                onChange={(e) => handleUpdate(note.id, e.target.value)}
+                className="note"
+                placeholder="Write something..."
+              />
+
+              <div className="note-bottom-pad"></div>
+
+            </div>
+          </Rnd>
         ))}
       </div>
     </div>

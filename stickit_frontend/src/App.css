@@ -22,9 +22,10 @@ button {
   border-radius: 12px;
   border: none;
   resize: none;
-  background: #000000;
-  font-size: 20px;
-  box-shadow: 0 8px 20px rgba(251, 251, 251, 0.785);
+  background: #fff8a6;
+  color: #333333;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   font-family: "Segoe UI", sans-serif;
 }
 
@@ -42,4 +43,98 @@ button {
   font-size: 12px;
   padding: 4px 6px;
   cursor: pointer;
+}
+
+.note-title {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+
+.note-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  background: #fff8a6;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* hidden drag bar */
+
+.drag-zone {
+  height: 28px;
+  background: #fff8a6;
+  cursor: move;
+
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  padding: 0 8px;
+}
+
+/* textarea */
+
+.note {
+  flex: 1;
+  padding: 10px;
+
+  border: none;
+  resize: none;
+  outline: none;
+
+  background: #fff8a6;
+  color: #1e1e1e;
+
+  font-size: 14px;
+  overflow-y: scroll;
+  box-sizing: border-box;
+  scrollbar-width: none;
+}
+
+.note::-webkit-scrollbar {
+  display: none;
+}
+
+/* bottom padding */
+
+.note-bottom-pad {
+  height: 6px;
+  background: #fff8a6;
+}
+
+/* delete button */
+
+.delete-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.note-container:hover .delete-btn {
+  opacity: 1;
+}
+
+.pin-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 6px;
+}
+
+.pinned-note-view {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.note-container.pinned {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
 }

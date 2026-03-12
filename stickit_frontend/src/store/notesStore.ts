@@ -7,7 +7,17 @@ export function createNote(notes: Note[]): Note[] {
     text: "",
     pinned: false,
     color: "#fff8a6",
-    opacity: 1
+    opacity: 1,
+
+    position: {
+        x: 100,
+        y: 100
+    },
+
+    size: {
+        width: 220,
+        height: 160
+    }
   }
 
   const updated = [...notes, newNote]
