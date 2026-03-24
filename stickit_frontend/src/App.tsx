@@ -5,14 +5,18 @@ import { invoke } from "@tauri-apps/api/core"
 import type { Note } from "./types/note"
 import { createNote, updateNote, deleteNote, getInitialNotes } from "./store/notesStore"
 import { getCurrentWindow } from "@tauri-apps/api/window"
+// import { getCurrentWindow } from "@tauri-apps/api/window"
 
 function App() {
   const [notes, setNotes] = useState<Note[]>(getInitialNotes())
   const windowLabel = getCurrentWindow().label
+  const [isFocused, setIsFocused] = useState(false)  
+  const appWindow = getCurrentWindow()
 
   const noteId = windowLabel.startsWith("note_")
     ? windowLabel.replace("note_", "")
     : null
+
 
   useEffect(() => {
     if (noteId) {
@@ -21,6 +25,12 @@ function App() {
       document.body.classList.remove('pinned-window')
     }
   }, [noteId])
+
+  function toggleEdit() {
+    const next = !isFocused
+    setIsFocused(next)
+    appWindow.setIgnoreCursorEvents(!next)
+  }
 
   function handleCreate() {
     setNotes(createNote(notes))
@@ -114,15 +124,21 @@ function App() {
             }}
             dragHandleClassName="drag-zone"
           >
-            <div className="note-container">
+            <div
+              className="note-container"
+              onClick={toggleEdit}
+            >
 
-              <div className="drag-zone">
+              <div 
+                className="drag-zone"
+                data-tauri-drag-region
+              >
 
                 <button
                   className="pin-btn"
                   onClick={() => handlePin(note)}
                 >
-                  📌
+                  🧷
                 </button>
 
                 <button

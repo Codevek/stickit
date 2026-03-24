@@ -3,23 +3,29 @@
 
 use tauri::{Manager, WebviewWindowBuilder, WebviewUrl};
 
+// #[tauri::command]
 #[tauri::command]
 fn pin_note(app: tauri::AppHandle, note: serde_json::Value) {
 
     let id = note["id"].as_str().unwrap();
+    let window_label = format!("note_{}", id);
 
-    WebviewWindowBuilder::new(
+    // prevent duplicate window
+    if app.get_webview_window(&window_label).is_some() {
+        return;
+    }
+
+    tauri::WebviewWindowBuilder::new(
         &app,
-        format!("note_{}", id),
-        WebviewUrl::App("index.html".into())
+        window_label,
+        tauri::WebviewUrl::App("index.html".into())
     )
     .title("StickIt Note")
     .inner_size(300.0, 200.0)
     .resizable(true)
     .decorations(false)
-    .transparent(true)
     .always_on_top(true)
-    .shadow(true)
+    .skip_taskbar(true)
     .build()
     .unwrap();
 }
