@@ -1,167 +1,401 @@
-import { useState, useEffect } from "react"
-import "./App.css"
-import { Rnd } from "react-rnd"
+import { useEffect, useRef, useState } from "react"
 import { invoke } from "@tauri-apps/api/core"
-import type { Note } from "./types/note"
-import { createNote, updateNote, deleteNote, getInitialNotes } from "./store/notesStore"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-// import { getCurrentWindow } from "@tauri-apps/api/window"
+import { Rnd } from "react-rnd"
+import "./App.css"
+import {
+  createNote,
+  deleteNote,
+  getInitialNotes,
+  setNotePinned,
+  updateBoardBounds,
+  updateNoteText,
+  updatePinnedBounds,
+} from "./store/notesStore"
+import type { Note, NoteBounds } from "./types/note"
+import { STORAGE_KEY, loadNotes } from "./utils/storage"
+
+const NOTE_WINDOW_PREFIX = "note_"
+
+async function openPinnedWindow(note: Note) {
+  await invoke("open_or_focus_note_window", {
+    noteId: note.id,
+    pinnedBounds: note.pinnedBounds,
+  })
+}
+
+async function closePinnedWindow(noteId: string) {
+  await invoke("close_note_window", { noteId })
+}
 
 function App() {
-  const [notes, setNotes] = useState<Note[]>(getInitialNotes())
-  const windowLabel = getCurrentWindow().label
-  const [isFocused, setIsFocused] = useState(false)  
   const appWindow = getCurrentWindow()
+  const windowLabel = appWindow.label
+  const isPinnedWindow = windowLabel.startsWith(NOTE_WINDOW_PREFIX)
+  const pinnedNoteId = isPinnedWindow
+    ? windowLabel.slice(NOTE_WINDOW_PREFIX.length)
+    : null
+  const [notes, setNotes] = useState<Note[]>(() => getInitialNotes())
+  const [isPinnedEditing, setIsPinnedEditing] = useState(false)
+  const pinnedTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const restoredPinnedWindowsRef = useRef(false)
 
-  const noteId = windowLabel.startsWith("note_")
-    ? windowLabel.replace("note_", "")
+  const pinnedNote = pinnedNoteId
+    ? notes.find((note) => note.id === pinnedNoteId) ?? null
     : null
 
+  useEffect(() => {
+    const root = document.documentElement
+    const body = document.body
+    const mountRoot = document.getElementById("root")
+
+    root.classList.toggle("pinned-window", isPinnedWindow)
+    body.classList.toggle("pinned-window", isPinnedWindow)
+    mountRoot?.classList.toggle("pinned-window", isPinnedWindow)
+
+    return () => {
+      root.classList.remove("pinned-window")
+      body.classList.remove("pinned-window")
+      mountRoot?.classList.remove("pinned-window")
+    }
+  }, [isPinnedWindow])
 
   useEffect(() => {
-    if (noteId) {
-      document.body.classList.add('pinned-window')
-    } else {
-      document.body.classList.remove('pinned-window')
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        setNotes(loadNotes())
+      }
     }
-  }, [noteId])
 
-  function toggleEdit() {
-    const next = !isFocused
-    setIsFocused(next)
-    appWindow.setIgnoreCursorEvents(!next)
-  }
+    window.addEventListener("storage", handleStorage)
+
+    return () => {
+      window.removeEventListener("storage", handleStorage)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isPinnedWindow || restoredPinnedWindowsRef.current) {
+      return
+    }
+
+    restoredPinnedWindowsRef.current = true
+
+    void Promise.all(
+      notes
+        .filter((note) => note.pinned)
+        .map((note) => openPinnedWindow(note).catch((error) => console.error(error))),
+    )
+  }, [isPinnedWindow, notes])
+
+  useEffect(() => {
+    if (!isPinnedWindow || !pinnedNoteId) {
+      return
+    }
+
+    if (!pinnedNote || !pinnedNote.pinned) {
+      void appWindow.close()
+    }
+  }, [appWindow, isPinnedWindow, pinnedNote, pinnedNoteId])
+
+  useEffect(() => {
+    if (!isPinnedWindow || !pinnedNoteId) {
+      return
+    }
+
+    let isActive = true
+    let unlisteners: Array<() => void> = []
+
+    const persistBounds = (partialBounds: Partial<NoteBounds>) => {
+      if (!isActive) {
+        return
+      }
+
+      setNotes((currentNotes) =>
+        updatePinnedBounds(currentNotes, pinnedNoteId, partialBounds),
+      )
+    }
+
+    const registerWindowListeners = async () => {
+      const position = await appWindow.outerPosition()
+      const size = await appWindow.innerSize()
+
+      persistBounds({ x: position.x, y: position.y })
+      persistBounds({ width: size.width, height: size.height })
+
+      const unlistenMoved = await appWindow.onMoved(({ payload }) => {
+        persistBounds({ x: payload.x, y: payload.y })
+      })
+
+      const unlistenResized = await appWindow.onResized(({ payload }) => {
+        persistBounds({ width: payload.width, height: payload.height })
+      })
+
+      const unlistenFocusChanged = await appWindow.onFocusChanged(({ payload }) => {
+        if (!payload) {
+          setIsPinnedEditing(false)
+        }
+      })
+
+      return [unlistenMoved, unlistenResized, unlistenFocusChanged]
+    }
+
+    void registerWindowListeners()
+      .then((registeredUnlisteners) => {
+        if (!isActive) {
+          registeredUnlisteners.forEach((unlisten) => unlisten())
+          return
+        }
+
+        unlisteners = registeredUnlisteners
+      })
+      .catch((error) => {
+        console.error(error)
+      })
+
+    return () => {
+      isActive = false
+      unlisteners.forEach((unlisten) => unlisten())
+    }
+  }, [appWindow, isPinnedWindow, pinnedNoteId])
+
+  useEffect(() => {
+    if (isPinnedWindow && isPinnedEditing) {
+      pinnedTextareaRef.current?.focus()
+    }
+  }, [isPinnedEditing, isPinnedWindow])
 
   function handleCreate() {
-    setNotes(createNote(notes))
+    setNotes((currentNotes) => createNote(currentNotes))
   }
 
   function handleUpdate(id: string, text: string) {
-    const updated = updateNote(notes, id, text);
-    setNotes(updated)
-    if (noteId) {
-      localStorage.setItem("stickit_notes", JSON.stringify(updated))
+    setNotes((currentNotes) => updateNoteText(currentNotes, id, text))
+  }
+
+  async function handleDelete(note: Note) {
+    setNotes((currentNotes) => deleteNote(currentNotes, note.id))
+
+    if (note.pinned) {
+      try {
+        await closePinnedWindow(note.id)
+      } catch (error) {
+        console.error(error)
+      }
     }
   }
 
-  function handleDelete(id: string) {
-    setNotes(deleteNote(notes, id))
+  async function handleTogglePin(note: Note) {
+    const nextPinnedState = !note.pinned
+    let updatedNote: Note | undefined
+
+    setNotes((currentNotes) => {
+      const updatedNotes = setNotePinned(currentNotes, note.id, nextPinnedState)
+      updatedNote = updatedNotes.find((candidate) => candidate.id === note.id)
+      return updatedNotes
+    })
+
+    try {
+      if (nextPinnedState) {
+        if (updatedNote) {
+          await openPinnedWindow(updatedNote)
+        }
+      } else {
+        await closePinnedWindow(note.id)
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
-  async function handlePin(note: Note) {
-    await invoke("pin_note", { note })
+  function handleBoardDragStop(note: Note, x: number, y: number) {
+    setNotes((currentNotes) =>
+      updateBoardBounds(currentNotes, note.id, {
+        ...note.boardBounds,
+        x,
+        y,
+      }),
+    )
   }
 
-  const visibleNotes = noteId
-    ? notes.filter(n => n.id === noteId)
-    : notes
+  function handleBoardResizeStop(
+    note: Note,
+    width: number,
+    height: number,
+    x: number,
+    y: number,
+  ) {
+    setNotes((currentNotes) =>
+      updateBoardBounds(currentNotes, note.id, {
+        x,
+        y,
+        width,
+        height,
+      }),
+    )
+  }
 
-  if (noteId) {
-    const note = visibleNotes[0];
-    if (!note) return null;
+  if (isPinnedWindow) {
+    if (!pinnedNote || !pinnedNote.pinned) {
+      return null
+    }
 
     return (
-      <div className="pinned-note-view">
-        <div className="note-container pinned">
-          <div className="drag-zone" data-tauri-drag-region>
+      <div
+        className="pinned-note-shell"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setIsPinnedEditing(false)
+          }
+        }}
+      >
+        <article
+          className={`pinned-note-card ${isPinnedEditing ? "is-editing" : "is-frozen"}`}
+          style={{
+            backgroundColor: pinnedNote.color,
+            opacity: pinnedNote.opacity,
+          }}
+        >
+          <div
+            className="drag-zone pinned-drag-zone"
+            data-tauri-drag-region
+            onMouseDown={() => {
+              setIsPinnedEditing(false)
+            }}
+          >
+            <span className="window-state">
+              {isPinnedEditing ? "Editing" : "Frozen"}
+            </span>
           </div>
-          <textarea
-            value={note.text}
-            onChange={(e) => handleUpdate(note.id, e.target.value)}
-            className="note"
-            placeholder="Write something..."
-          />
-          <div className="note-bottom-pad"></div>
-        </div>
+
+          <div className="pinned-note-body">
+            {isPinnedEditing ? (
+              <textarea
+                ref={pinnedTextareaRef}
+                value={pinnedNote.text}
+                onChange={(event) => handleUpdate(pinnedNote.id, event.target.value)}
+                onBlur={() => {
+                  setIsPinnedEditing(false)
+                }}
+                className="note note-textarea pinned-textarea"
+                placeholder="Write something..."
+              />
+            ) : (
+              <button
+                type="button"
+                className="pinned-note-overlay"
+                onClick={() => {
+                  setIsPinnedEditing(true)
+                }}
+              >
+                {pinnedNote.text ? (
+                  <span className="pinned-note-preview">{pinnedNote.text}</span>
+                ) : (
+                  <span className="pinned-note-placeholder">
+                    Click to write something...
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+        </article>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="app">
-      <h1>StickIt</h1>
+    <div className="app-shell">
+      <section className="hero-panel">
+        <p className="eyebrow">Desktop sticky notes</p>
+        <div className="hero-copy">
+          <h1>StickIt</h1>
+          <p>
+            Create notes on the board, then pin the ones you want floating on your
+            desktop.
+          </p>
+        </div>
+        <button className="create-note-btn" onClick={handleCreate}>
+          New Note
+        </button>
+      </section>
 
-      <button onClick={handleCreate}>+ New Note</button>
-
-      <div className="notes">
-        {visibleNotes.map((note) => (
-          <Rnd
-            key={note.id}
-            size={{
-              width: note.size?.width ?? 220,
-              height: note.size?.height ?? 160
-            }}
-            position={{
-              x: note.position?.x ?? 100,
-              y: note.position?.y ?? 100
-            }}
-            onDragStop={(_, d) => {
-              const updated = notes.map(n =>
-                n.id === note.id
-                  ? { ...n, position: { x: d.x, y: d.y } }
-                  : n
-              )
-
-              setNotes(updated)
-              localStorage.setItem("stickit_notes", JSON.stringify(updated))
-            }}
-            onResizeStop={(_, __, ref, ___, position) => {
-              const updated = notes.map(n =>
-                n.id === note.id
-                  ? {
-                      ...n,
-                      size: {
-                        width: parseInt(ref.style.width),
-                        height: parseInt(ref.style.height)
-                      },
-                      position
-                    }
-                  : n
-              )
-
-              setNotes(updated)
-              localStorage.setItem("stickit_notes", JSON.stringify(updated))
-            }}
-            dragHandleClassName="drag-zone"
-          >
-            <div
-              className="note-container"
-              onClick={toggleEdit}
+      <section className="board-panel">
+        <div className="notes-board">
+          {notes.map((note) => (
+            <Rnd
+              key={note.id}
+              size={{
+                width: note.boardBounds.width,
+                height: note.boardBounds.height,
+              }}
+              position={{
+                x: note.boardBounds.x,
+                y: note.boardBounds.y,
+              }}
+              minWidth={220}
+              minHeight={170}
+              bounds="parent"
+              dragHandleClassName="drag-zone"
+              onDragStop={(_, data) => {
+                handleBoardDragStop(note, data.x, data.y)
+              }}
+              onResizeStop={(_, __, ref, ___, position) => {
+                handleBoardResizeStop(
+                  note,
+                  Number.parseInt(ref.style.width, 10),
+                  Number.parseInt(ref.style.height, 10),
+                  position.x,
+                  position.y,
+                )
+              }}
             >
-
-              <div 
-                className="drag-zone"
-                data-tauri-drag-region
+              <article
+                className={`board-note-card ${note.pinned ? "is-pinned" : ""}`}
+                style={{
+                  backgroundColor: note.color,
+                  opacity: note.opacity,
+                }}
               >
+                <div className="drag-zone board-note-toolbar">
+                  <span className="note-badge">
+                    {note.pinned ? "Pinned" : "Board"}
+                  </span>
+                  <div className="toolbar-actions">
+                    <button
+                      type="button"
+                      className={`pin-btn ${note.pinned ? "is-active" : ""}`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void handleTogglePin(note)
+                      }}
+                    >
+                      {note.pinned ? "Unpin" : "Pin"}
+                    </button>
 
-                <button
-                  className="pin-btn"
-                  onClick={() => handlePin(note)}
-                >
-                  🧷
-                </button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void handleDelete(note)
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
 
-                <button
-                  className="delete-btn"
-                  onClick={() => handleDelete(note.id)}
-                >
-                  X
-                </button>
-              </div>
-
-              <textarea
-                value={note.text}
-                onChange={(e) => handleUpdate(note.id, e.target.value)}
-                className="note"
-                placeholder="Write something..."
-              />
-
-              <div className="note-bottom-pad"></div>
-
-            </div>
-          </Rnd>
-        ))}
-      </div>
+                <textarea
+                  value={note.text}
+                  onChange={(event) => handleUpdate(note.id, event.target.value)}
+                  className="note note-textarea"
+                  placeholder="Write something..."
+                />
+              </article>
+            </Rnd>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
