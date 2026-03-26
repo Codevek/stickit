@@ -17,24 +17,7 @@ A lightweight Windows desktop sticky notes app where notes can be pinned directl
 - **Frontend:** React + Vite + TypeScript
 - **Local Storage:** SQLite
 - **Future Backend:** FastAPI + PostgreSQL + WebSockets
-
-## Project Structure
-sticky-desktop-notes/
-├── frontend/
-│ └── src/
-│ ├── components/
-│ ├── pages/
-│ ├── hooks/
-│ ├── store/
-│ └── styles/
-├── src-tauri/
-│ └── src/
-│ └── main.rs
-├── database/
-│ └── schema.sql
-└── docs/
-
-
+  
 ## Setup
 
 Install dependencies:
