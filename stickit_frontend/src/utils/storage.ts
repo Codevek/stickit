@@ -21,6 +21,20 @@ type StoredNote = Partial<Note> & {
   size?: Partial<Pick<NoteBounds, "width" | "height">>
 }
 
+function createFallbackNoteId(seed: number): string {
+  return `note-${Date.now()}-${seed}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+export function createNoteId(seed = 0): string {
+  const cryptoApi = globalThis.crypto
+
+  if (cryptoApi?.randomUUID) {
+    return cryptoApi.randomUUID()
+  }
+
+  return createFallbackNoteId(seed)
+}
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value)
 }
@@ -48,7 +62,7 @@ function baseBoardBounds(index: number): NoteBounds {
   }
 }
 
-function normalizeNote(note: StoredNote, index: number): Note {
+function normalizeNote(note: StoredNote, index: number, usedIds: Set<string>): Note {
   const fallbackBoardBounds = baseBoardBounds(index)
   const legacyBounds = normalizeBounds(
     {
@@ -69,11 +83,17 @@ function normalizeNote(note: StoredNote, index: number): Note {
     height: Math.max(DEFAULT_PINNED_BOUNDS.height, boardBounds.height),
   }
 
+  let id =
+    typeof note.id === "string" && note.id.trim().length > 0 ? note.id : createNoteId(index)
+
+  while (usedIds.has(id)) {
+    id = createNoteId(index)
+  }
+
+  usedIds.add(id)
+
   return {
-    id:
-      typeof note.id === "string" && note.id.trim().length > 0
-        ? note.id
-        : `note-${Date.now()}-${index}`,
+    id,
     text: typeof note.text === "string" ? note.text : "",
     pinned: Boolean(note.pinned),
     color: typeof note.color === "string" ? note.color : "#fce27a",
@@ -88,7 +108,11 @@ function normalizeNotes(input: unknown): Note[] {
     return []
   }
 
-  return input.map((note, index) => normalizeNote((note ?? {}) as StoredNote, index))
+  const usedIds = new Set<string>()
+
+  return input.map((note, index) =>
+    normalizeNote((note ?? {}) as StoredNote, index, usedIds),
+  )
 }
 
 export function loadNotes(): Note[] {

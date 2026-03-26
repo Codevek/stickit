@@ -32,10 +32,6 @@ fn open_or_focus_note_window(
     .position(pinned_bounds.x, pinned_bounds.y)
     .inner_size(pinned_bounds.width, pinned_bounds.height)
     .resizable(true)
-    .decorations(false)
-    .transparent(true)
-    .always_on_top(true)
-    .skip_taskbar(true)
     .build()
     .map_err(|error| error.to_string())?;
 
