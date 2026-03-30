@@ -23,20 +23,29 @@ fn open_or_focus_note_window(
 
   if let Some(window) = app.get_webview_window(&window_label) {
     window.show().map_err(|error| error.to_string())?;
-    window.set_focus().map_err(|error| error.to_string())?;
+    // window.set_focus().map_err(|error| error.to_string())?;
     return Ok(());
   }
 
-  let window = WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App("index.html".into()))
-    .title("StickIt Note")
-    .position(pinned_bounds.x, pinned_bounds.y)
-    .inner_size(pinned_bounds.width, pinned_bounds.height)
-    .resizable(true)
-    .build()
-    .map_err(|error| error.to_string())?;
+  let window = WebviewWindowBuilder::new(
+    &app,
+    &window_label,
+    WebviewUrl::App("index.html".into())
+  )
+  .title("StickIt Note")
+  .position(pinned_bounds.x, pinned_bounds.y)
+  .inner_size(pinned_bounds.width, pinned_bounds.height)
+  .resizable(true)
+  .decorations(false)        // no border
+  .skip_taskbar(true)        // not in taskbar
+  .always_on_top(true)       // stays visible
+  .transparent(true)         // needed for widget feel
+  .focused(false)            // don’t steal focus
+  .build()
+  .map_err(|error| error.to_string())?;
 
   window.show().map_err(|error| error.to_string())?;
-  window.set_focus().map_err(|error| error.to_string())?;
+  // window.set_focus().map_err(|error| error.to_string())?;
 
   Ok(())
 }

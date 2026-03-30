@@ -286,3 +286,8 @@
     min-height: 70vh;
   }
 }
+
+.pinned-drag-zone {
+  pointer-events: auto;
+  z-index: 10;
+}

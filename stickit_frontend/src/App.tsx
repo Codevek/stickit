@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react"
-import { invoke } from "@tauri-apps/api/core"
-import { emit, emitTo, listen } from "@tauri-apps/api/event"
-import { getCurrentWindow } from "@tauri-apps/api/window"
-import { Rnd } from "react-rnd"
-import "./App.css"
+import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Rnd } from "react-rnd";
+import "./App.css";
 import {
   createNote,
   deleteNote,
@@ -12,291 +11,209 @@ import {
   updateBoardBounds,
   updateNoteText,
   updatePinnedBounds,
-} from "./store/notesStore"
-import type { Note, NoteBounds } from "./types/note"
-import { STORAGE_KEY, createNoteId, loadNotes, saveNotes } from "./utils/storage"
+} from "./store/notesStore";
+import type { Note, NoteBounds } from "./types/note";
+import { STORAGE_KEY, loadNotes } from "./utils/storage";
 
-const NOTE_WINDOW_PREFIX = "note_"
-const NOTES_SYNC_EVENT = "notes:sync"
-const PINNED_WINDOW_READY_EVENT = "pinned-window:ready"
-
-type NotesSyncPayload = {
-  notes: Note[]
-  sourceWindowLabel: string
-}
-
-type PinnedWindowReadyPayload = {
-  noteId: string
-  windowLabel: string
-}
+const NOTE_WINDOW_PREFIX = "note_";
 
 async function openPinnedWindow(note: Note) {
   await invoke("open_or_focus_note_window", {
     noteId: note.id,
     pinnedBounds: note.pinnedBounds,
-  })
+  });
 }
 
 async function closePinnedWindow(noteId: string) {
-  await invoke("close_note_window", { noteId })
+  await invoke("close_note_window", { noteId });
 }
 
 function App() {
-  const appWindow = getCurrentWindow()
-  const windowLabel = appWindow.label
-  const isPinnedWindow = windowLabel.startsWith(NOTE_WINDOW_PREFIX)
+  const appWindow = getCurrentWindow();
+  const windowLabel = appWindow.label;
+  const isPinnedWindow = windowLabel.startsWith(NOTE_WINDOW_PREFIX);
   const pinnedNoteId = isPinnedWindow
     ? windowLabel.slice(NOTE_WINDOW_PREFIX.length)
-    : null
-  const [notes, setNotes] = useState<Note[]>(() => getInitialNotes())
-  const restoredPinnedWindowsRef = useRef(false)
+    : null;
+  const [notes, setNotes] = useState<Note[]>(() => getInitialNotes());
+  const [isPinnedEditing, setIsPinnedEditing] = useState(false);
+  const pinnedTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const restoredPinnedWindowsRef = useRef(false);
 
   const pinnedNote = pinnedNoteId
-    ? notes.find((note) => note.id === pinnedNoteId) ?? null
-    : null
-  const [isPinnedWindowReady, setIsPinnedWindowReady] = useState(
-    () => !isPinnedWindow || pinnedNote !== null,
-  )
-  const notesRef = useRef(notes)
+    ? (notes.find((note) => note.id === pinnedNoteId) ?? null)
+    : null;
 
   useEffect(() => {
-    notesRef.current = notes
-  }, [notes])
-
-  async function broadcastNotes(nextNotes: Note[]) {
-    await emit<NotesSyncPayload>(NOTES_SYNC_EVENT, {
-      notes: nextNotes,
-      sourceWindowLabel: windowLabel,
-    })
-  }
-
-  function updateNotes(updater: (currentNotes: Note[]) => Note[]) {
-    setNotes((currentNotes) => {
-      const nextNotes = saveNotes(updater(currentNotes))
-      void broadcastNotes(nextNotes).catch((error) => console.error(error))
-      return nextNotes
-    })
-  }
-
-  useEffect(() => {
-    const root = document.documentElement
-    const body = document.body
-    const mountRoot = document.getElementById("root")
-
-    root.classList.toggle("pinned-window", isPinnedWindow)
-    body.classList.toggle("pinned-window", isPinnedWindow)
-    mountRoot?.classList.toggle("pinned-window", isPinnedWindow)
-
-    return () => {
-      root.classList.remove("pinned-window")
-      body.classList.remove("pinned-window")
-      mountRoot?.classList.remove("pinned-window")
+    if (isPinnedWindow) {
+      setNotes(loadNotes())
     }
   }, [isPinnedWindow])
 
   useEffect(() => {
-    let isActive = true
-    let stopListening = () => {}
+    const root = document.documentElement;
+    const body = document.body;
+    const mountRoot = document.getElementById("root");
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) {
-        const syncedNotes = loadNotes()
-        setIsPinnedWindowReady(true)
-        setNotes(syncedNotes)
-      }
-    }
-
-    window.addEventListener("storage", handleStorage)
-
-    void listen<NotesSyncPayload>(NOTES_SYNC_EVENT, ({ payload }) => {
-      if (!isActive || payload.sourceWindowLabel === windowLabel) {
-        return
-      }
-
-      const syncedNotes = saveNotes(payload.notes)
-      setIsPinnedWindowReady(true)
-      setNotes(syncedNotes)
-    })
-      .then((unlisten) => {
-        stopListening = unlisten
-      })
-      .catch((error) => console.error(error))
+    root.classList.toggle("pinned-window", isPinnedWindow);
+    body.classList.toggle("pinned-window", isPinnedWindow);
+    mountRoot?.classList.toggle("pinned-window", isPinnedWindow);
 
     return () => {
-      isActive = false
-      stopListening()
-      window.removeEventListener("storage", handleStorage)
-    }
-  }, [windowLabel])
+      root.classList.remove("pinned-window");
+      body.classList.remove("pinned-window");
+      mountRoot?.classList.remove("pinned-window");
+    };
+  }, [isPinnedWindow]);
 
   useEffect(() => {
-    if (isPinnedWindow) {
-      return
-    }
+    if (!isPinnedWindow) return
 
-    let isActive = true
-    let stopListening = () => {}
+    appWindow.setIgnoreCursorEvents(true)
+  }, [isPinnedWindow])
 
-    void listen<PinnedWindowReadyPayload>(PINNED_WINDOW_READY_EVENT, ({ payload }) => {
-      if (!isActive || !payload.windowLabel.startsWith(NOTE_WINDOW_PREFIX)) {
-        return
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        setNotes(loadNotes());
       }
+    };
 
-      void emitTo<NotesSyncPayload>(payload.windowLabel, NOTES_SYNC_EVENT, {
-        notes: notesRef.current,
-        sourceWindowLabel: windowLabel,
-      }).catch((error) => console.error(error))
-    })
-      .then((unlisten) => {
-        stopListening = unlisten
-      })
-      .catch((error) => console.error(error))
+    window.addEventListener("storage", handleStorage);
 
     return () => {
-      isActive = false
-      stopListening()
-    }
-  }, [isPinnedWindow, windowLabel])
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (isPinnedWindow || restoredPinnedWindowsRef.current) {
-      return
+      return;
     }
 
-    restoredPinnedWindowsRef.current = true
+    restoredPinnedWindowsRef.current = true;
 
     void Promise.all(
       notes
         .filter((note) => note.pinned)
-        .map((note) => openPinnedWindow(note).catch((error) => console.error(error))),
-    )
-  }, [isPinnedWindow, notes])
-
-  useEffect(() => {
-    if (!isPinnedWindow || !pinnedNoteId || pinnedNote) {
-      return
-    }
-
-    let isActive = true
-
-    const requestNoteState = () => {
-      if (!isActive) {
-        return
-      }
-
-      void emit<PinnedWindowReadyPayload>(PINNED_WINDOW_READY_EVENT, {
-        noteId: pinnedNoteId,
-        windowLabel,
-      }).catch((error) => console.error(error))
-    }
-
-    requestNoteState()
-    const intervalId = window.setInterval(requestNoteState, 500)
-
-    return () => {
-      isActive = false
-      window.clearInterval(intervalId)
-    }
-  }, [isPinnedWindow, pinnedNote, pinnedNoteId, windowLabel])
-
-  useEffect(() => {
-    if (!isPinnedWindow || !pinnedNoteId || !isPinnedWindowReady) {
-      return
-    }
-
-    if (!pinnedNote || !pinnedNote.pinned) {
-      void appWindow.close()
-    }
-  }, [appWindow, isPinnedWindow, isPinnedWindowReady, pinnedNote, pinnedNoteId])
+        .map((note) =>
+          openPinnedWindow(note).catch((error) => console.error(error)),
+        ),
+    );
+  }, [isPinnedWindow, notes]);
 
   useEffect(() => {
     if (!isPinnedWindow || !pinnedNoteId) {
-      return
+      return;
     }
 
-    let isActive = true
-    let unlisteners: Array<() => void> = []
+    if (pinnedNote && !pinnedNote.pinned) {
+      void appWindow.close();
+    }
+  }, [appWindow, isPinnedWindow, pinnedNote, pinnedNoteId]);
+
+  useEffect(() => {
+    if (!isPinnedWindow || !pinnedNoteId) {
+      return;
+    }
+
+    let isActive = true;
+    let unlisteners: Array<() => void> = [];
 
     const persistBounds = (partialBounds: Partial<NoteBounds>) => {
       if (!isActive) {
-        return
+        return;
       }
 
-      updateNotes((currentNotes) =>
+      setNotes((currentNotes) =>
         updatePinnedBounds(currentNotes, pinnedNoteId, partialBounds),
-      )
-    }
+      );
+    };
 
     const registerWindowListeners = async () => {
-      const position = await appWindow.outerPosition()
-      const size = await appWindow.innerSize()
+      const position = await appWindow.outerPosition();
+      const size = await appWindow.innerSize();
 
-      persistBounds({ x: position.x, y: position.y })
-      persistBounds({ width: size.width, height: size.height })
+      persistBounds({ x: position.x, y: position.y });
+      persistBounds({ width: size.width, height: size.height });
 
       const unlistenMoved = await appWindow.onMoved(({ payload }) => {
-        persistBounds({ x: payload.x, y: payload.y })
-      })
+        persistBounds({ x: payload.x, y: payload.y });
+      });
 
       const unlistenResized = await appWindow.onResized(({ payload }) => {
-        persistBounds({ width: payload.width, height: payload.height })
-      })
+        persistBounds({ width: payload.width, height: payload.height });
+      });
 
-      return [unlistenMoved, unlistenResized]
-    }
+      const unlistenFocusChanged = await appWindow.onFocusChanged(
+        ({ payload }) => {
+          if (!payload) {
+            setIsPinnedEditing(false);
+          }
+        },
+      );
+
+      return [unlistenMoved, unlistenResized, unlistenFocusChanged];
+    };
 
     void registerWindowListeners()
       .then((registeredUnlisteners) => {
         if (!isActive) {
-          registeredUnlisteners.forEach((unlisten) => unlisten())
-          return
+          registeredUnlisteners.forEach((unlisten) => unlisten());
+          return;
         }
 
-        unlisteners = registeredUnlisteners
+        unlisteners = registeredUnlisteners;
       })
       .catch((error) => {
-        console.error(error)
-      })
+        console.error(error);
+      });
 
     return () => {
-      isActive = false
-      unlisteners.forEach((unlisten) => unlisten())
+      isActive = false;
+      unlisteners.forEach((unlisten) => unlisten());
+    };
+  }, [appWindow, isPinnedWindow, pinnedNoteId]);
+
+  useEffect(() => {
+    if (isPinnedWindow && isPinnedEditing) {
+      pinnedTextareaRef.current?.focus();
     }
-  }, [appWindow, isPinnedWindow, pinnedNoteId])
+  }, [isPinnedEditing, isPinnedWindow]);
 
   function handleCreate() {
-    const noteId = createNoteId()
-    updateNotes((currentNotes) => createNote(currentNotes, noteId))
+    setNotes((currentNotes) => createNote(currentNotes));
   }
 
   function handleUpdate(id: string, text: string) {
-    updateNotes((currentNotes) => updateNoteText(currentNotes, id, text))
+    setNotes((currentNotes) => updateNoteText(currentNotes, id, text));
   }
 
   async function handleDelete(note: Note) {
-    updateNotes((currentNotes) => deleteNote(currentNotes, note.id))
+    setNotes((currentNotes) => deleteNote(currentNotes, note.id));
 
     if (note.pinned) {
       try {
-        await closePinnedWindow(note.id)
+        await closePinnedWindow(note.id);
       } catch (error) {
-        console.error(error)
+        console.error(error);
       }
     }
   }
 
   async function handleTogglePin(note: Note) {
     const nextPinnedState = !note.pinned
-    const updatedNote: Note = {
-      ...note,
-      pinned: nextPinnedState,
-    }
 
-    updateNotes((currentNotes) => setNotePinned(currentNotes, note.id, nextPinnedState))
+    updateAndSave((currentNotes) =>
+      setNotePinned(currentNotes, note.id, nextPinnedState)
+    )
 
     try {
       if (nextPinnedState) {
-        await openPinnedWindow(updatedNote)
+        await openPinnedWindow({
+          ...note,
+          pinned: true,
+        })
       } else {
         await closePinnedWindow(note.id)
       }
@@ -305,14 +222,22 @@ function App() {
     }
   }
 
+  function updateAndSave(updater: (notes: Note[]) => Note[]) {
+    setNotes((current) => {
+      const next = updater(current)
+      localStorage.setItem("stickit_notes", JSON.stringify(next))
+      return next
+    })
+  }
+
   function handleBoardDragStop(note: Note, x: number, y: number) {
-    updateNotes((currentNotes) =>
+    setNotes((currentNotes) =>
       updateBoardBounds(currentNotes, note.id, {
         ...note.boardBounds,
         x,
         y,
       }),
-    )
+    );
   }
 
   function handleBoardResizeStop(
@@ -322,91 +247,92 @@ function App() {
     x: number,
     y: number,
   ) {
-    updateNotes((currentNotes) =>
+    setNotes((currentNotes) =>
       updateBoardBounds(currentNotes, note.id, {
         x,
         y,
         width,
         height,
       }),
+    );
+  }
+  const note = pinnedNote
+  
+  if (isPinnedWindow) {
+   if (!pinnedNote) {
+    return (
+      <div className="pinned-note-loading">
+        <div className="pinned-note-loading-copy">
+          Loading...
+        </div>
+      </div>
     )
   }
 
-  function handlePinnedToolbarMouseDown(event: MouseEvent<HTMLDivElement>) {
-    if ((event.target as HTMLElement).closest("button")) {
-      return
-    }
-
-    void appWindow.startDragging().catch((error) => console.error(error))
+  if (!pinnedNote.pinned) {
+    return null
   }
-
-  if (isPinnedWindow) {
-    if (!isPinnedWindowReady && !pinnedNote) {
-      return (
-        <div className="pinned-note-shell">
-          <article className="pinned-note-card pinned-note-loading">
-            <div className="drag-zone pinned-note-toolbar" />
-            <div className="pinned-note-body pinned-note-loading-copy">
-              Loading note...
-            </div>
-          </article>
-        </div>
-      )
-    }
-
-    if (!pinnedNote || !pinnedNote.pinned) {
-      return null
-    }
-
+    
     return (
-      <div className="pinned-note-shell">
+      <div
+        className="pinned-note-shell"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setIsPinnedEditing(false);
+          }
+        }}
+      >
         <article
-          className="pinned-note-card"
+          className={`pinned-note-card ${isPinnedEditing ? "is-editing" : "is-frozen"}`}
           style={{
             backgroundColor: pinnedNote.color,
             opacity: pinnedNote.opacity,
           }}
         >
           <div
-            className="drag-zone pinned-note-toolbar"
+            className="drag-zone pinned-drag-zone"
             data-tauri-drag-region
-            onMouseDown={handlePinnedToolbarMouseDown}
+            onMouseDown={() => {
+              setIsPinnedEditing(false);
+            }}
           >
-            <span className="window-state">Pinned</span>
-            <div className="toolbar-actions">
-              <button
-                type="button"
-                className="pin-btn is-active"
-                onClick={() => {
-                  void handleTogglePin(pinnedNote)
-                }}
-              >
-                Unpin
-              </button>
-
-              <button
-                type="button"
-                className="delete-btn"
-                onClick={() => {
-                  void handleDelete(pinnedNote)
-                }}
-              >
-                Delete
-              </button>
-            </div>
+            <span className="window-state">
+              {isPinnedEditing ? "Editing" : "Frozen"}
+            </span>
           </div>
 
           <div className="pinned-note-body">
-            <textarea
-              value={pinnedNote.text}
-              onChange={(event) => handleUpdate(pinnedNote.id, event.target.value)}
-              className="note note-textarea pinned-textarea"
-              placeholder="Write something..."
-            />
+            {isPinnedEditing ? (
+              <textarea
+                value={pinnedNote.text}
+                onFocus={() => appWindow.setIgnoreCursorEvents(false)}
+                onBlur={() => appWindow.setIgnoreCursorEvents(true)}
+                onChange={(event) => handleUpdate(pinnedNote.id, event.target.value)}
+                className="note note-textarea pinned-textarea"
+                placeholder="Write something..."
+              />
+            ) : (
+              <button
+                type="button"
+                className="pinned-note-overlay"
+                onClick={() => {
+                  setIsPinnedEditing(true);
+                }}
+                style={{ pointerEvents: isPinnedEditing ? "none" : "auto" }}
+              >
+                {pinnedNote.text ? (
+                  <span className="pinned-note-preview">{pinnedNote.text}</span>
+                ) : (
+                  <span className="pinned-note-placeholder">
+                    Click to write something...
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </article>
       </div>
-    )
+    );
   }
 
   return (
@@ -416,8 +342,8 @@ function App() {
         <div className="hero-copy">
           <h1>StickIt</h1>
           <p>
-            Create notes on the board, then pin the ones you want floating on your
-            desktop.
+            Create notes on the board, then pin the ones you want floating on
+            your desktop.
           </p>
         </div>
         <button className="create-note-btn" onClick={handleCreate}>
@@ -443,7 +369,7 @@ function App() {
               bounds="parent"
               dragHandleClassName="drag-zone"
               onDragStop={(_, data) => {
-                handleBoardDragStop(note, data.x, data.y)
+                handleBoardDragStop(note, data.x, data.y);
               }}
               onResizeStop={(_, __, ref, ___, position) => {
                 handleBoardResizeStop(
@@ -452,7 +378,7 @@ function App() {
                   Number.parseInt(ref.style.height, 10),
                   position.x,
                   position.y,
-                )
+                );
               }}
             >
               <article
@@ -471,8 +397,8 @@ function App() {
                       type="button"
                       className={`pin-btn ${note.pinned ? "is-active" : ""}`}
                       onClick={(event) => {
-                        event.stopPropagation()
-                        void handleTogglePin(note)
+                        event.stopPropagation();
+                        void handleTogglePin(note);
                       }}
                     >
                       {note.pinned ? "Unpin" : "Pin"}
@@ -482,8 +408,8 @@ function App() {
                       type="button"
                       className="delete-btn"
                       onClick={(event) => {
-                        event.stopPropagation()
-                        void handleDelete(note)
+                        event.stopPropagation();
+                        void handleDelete(note);
                       }}
                     >
                       Delete
@@ -493,8 +419,15 @@ function App() {
 
                 <textarea
                   value={note.text}
-                  onChange={(event) => handleUpdate(note.id, event.target.value)}
-                  className="note note-textarea"
+                  onFocus={() => appWindow.setIgnoreCursorEvents(false)}
+                  onBlur={() => {
+                    setIsPinnedEditing(false)
+                    appWindow.setIgnoreCursorEvents(true)
+                  }}
+                  onChange={(event) =>
+                    handleUpdate(note.id, event.target.value)
+                  }
+                  className="note note-textarea pinned-textarea"
                   placeholder="Write something..."
                 />
               </article>
@@ -503,7 +436,7 @@ function App() {
         </div>
       </section>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
