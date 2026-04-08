@@ -69,7 +69,7 @@ function App() {
   useEffect(() => {
     if (!isPinnedWindow) return
 
-    appWindow.setIgnoreCursorEvents(true)
+    // appWindow.setIgnoreCursorEvents(true)
   }, [isPinnedWindow])
 
   useEffect(() => {
@@ -79,12 +79,22 @@ function App() {
       }
     };
 
-    window.addEventListener("storage", handleStorage);
+    // window.addEventListener("storage", handleStorage);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isPinnedWindow) return
+
+    const interval = setInterval(() => {
+      setNotes(loadNotes())
+    }, 300)
+
+    return () => clearInterval(interval)
+  }, [isPinnedWindow])
 
   useEffect(() => {
     if (isPinnedWindow || restoredPinnedWindowsRef.current) {
@@ -256,7 +266,7 @@ function App() {
       }),
     );
   }
-  const note = pinnedNote
+  // const note = pinnedNote
   
   if (isPinnedWindow) {
    if (!pinnedNote) {
@@ -301,12 +311,12 @@ function App() {
             </span>
           </div>
 
-          <div className="pinned-note-body">
+          <div className="pinned-note-body" data-tauri-drag-region >
             {isPinnedEditing ? (
               <textarea
                 value={pinnedNote.text}
-                onFocus={() => appWindow.setIgnoreCursorEvents(false)}
-                onBlur={() => appWindow.setIgnoreCursorEvents(true)}
+                // onFocus={() => appWindow.setIgnoreCursorEvents(false)}
+                // onBlur={() => appWindow.setIgnoreCursorEvents(true)}
                 onChange={(event) => handleUpdate(pinnedNote.id, event.target.value)}
                 className="note note-textarea pinned-textarea"
                 placeholder="Write something..."
@@ -422,7 +432,7 @@ function App() {
                   onFocus={() => appWindow.setIgnoreCursorEvents(false)}
                   onBlur={() => {
                     setIsPinnedEditing(false)
-                    appWindow.setIgnoreCursorEvents(true)
+                    // appWindow.setIgnoreCursorEvents(true)
                   }}
                   onChange={(event) =>
                     handleUpdate(note.id, event.target.value)
