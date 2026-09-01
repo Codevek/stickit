@@ -1,0 +1,413 @@
+/* widget.css — Glassmorphism always-on-top widget */
+
+/* ── Google Font fallback ────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── Design tokens ───────────────────────────────────────────────────── */
+:root {
+  --accent:        #7C5CFC;
+  --accent-glow:   #7C5CFC40;
+  --accent-dim:    #5a3fd1;
+
+  --prio-low:      #3DD68C;
+  --prio-med:      #F5A623;
+  --prio-high:     #FF5F57;
+
+  --bg:            rgba(14, 14, 20, 0.88);
+  --surface:       rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.10);
+  --border:        rgba(255, 255, 255, 0.09);
+  --text:          #E8E8F0;
+  --text-dim:      #7878A0;
+  --text-done:     #4A4A6A;
+
+  --radius:        12px;
+  --radius-sm:     8px;
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --transition:    0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg:            rgba(248, 248, 255, 0.92);
+  --surface:       rgba(0, 0, 0, 0.05);
+  --surface-hover: rgba(0, 0, 0, 0.09);
+  --border:        rgba(0, 0, 0, 0.10);
+  --text:          #1a1a2e;
+  --text-dim:      #6868A0;
+  --text-done:     #B0B0CC;
+}
+
+/* ── Reset & Base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ── App container ───────────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.45),
+    0 0 0 0.5px rgba(255,255,255,0.08) inset;
+}
+
+/* ── Titlebar ────────────────────────────────────────────────────────── */
+#titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  cursor: move;
+  flex-shrink: 0;
+}
+
+#title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: move;
+}
+
+#app-icon { font-size: 13px; }
+#app-name  { font-size: 12px; font-weight: 600; letter-spacing: 0.4px; color: var(--text-dim); }
+
+#title-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Icon buttons ────────────────────────────────────────────────────── */
+.icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+  padding: 0;
+  line-height: 1;
+}
+.icon-btn:hover { background: var(--surface-hover); color: var(--text); transform: scale(1.1); }
+.icon-btn.active { color: var(--accent); }
+.icon-btn.accent {
+  background: var(--accent);
+  color: #fff;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 300;
+}
+.icon-btn.accent:hover { background: var(--accent-dim); transform: scale(1.08); }
+
+/* ── Widget body ─────────────────────────────────────────────────────── */
+#widget-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#widget-body.collapsed { max-height: 0; }
+
+/* ── Stats bar ───────────────────────────────────────────────────────── */
+#stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 4px;
+}
+#stats-text { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+.text-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; font-family: var(--font);
+  color: var(--text-dim);
+  padding: 2px 4px; border-radius: 4px;
+  transition: color var(--transition), background var(--transition);
+}
+.text-btn:hover { color: var(--prio-high); background: rgba(255, 95, 87, 0.12); }
+
+/* ── Filter tabs ─────────────────────────────────────────────────────── */
+#filter-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px 6px;
+}
+.filter-tab {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 0;
+  font-size: 11px;
+  font-family: var(--font);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.filter-tab:hover { background: var(--surface); color: var(--text); }
+.filter-tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Todo list ───────────────────────────────────────────────────────── */
+#todo-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  padding: 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+#todo-list::-webkit-scrollbar { width: 3px; }
+#todo-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+/* ── Todo item ───────────────────────────────────────────────────────── */
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+  cursor: default;
+  transition: background var(--transition), transform var(--transition), opacity var(--transition);
+  position: relative;
+  animation: slideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.todo-item:hover { background: var(--surface); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideOut {
+  from { opacity: 1; transform: translateX(0) scaleY(1); max-height: 40px; }
+  to   { opacity: 0; transform: translateX(8px) scaleY(0); max-height: 0; padding: 0; margin: 0; }
+}
+.todo-item.removing {
+  animation: slideOut 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+/* Priority dot */
+.prio-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform var(--transition);
+}
+.todo-item:hover .prio-dot { transform: scale(1.4); }
+.prio-1 { background: var(--prio-low); }
+.prio-2 { background: var(--prio-med); }
+.prio-3 { background: var(--prio-high); box-shadow: 0 0 6px var(--prio-high); }
+
+/* Checkbox */
+.todo-check {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+.todo-check:hover { border-color: var(--accent); background: var(--accent-glow); }
+.todo-check.checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.todo-check.checked::after {
+  content: '';
+  display: block;
+  width: 9px; height: 5px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+/* Todo text */
+.todo-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text);
+  word-break: break-word;
+  transition: color var(--transition);
+  outline: none;
+}
+.todo-text[contenteditable="true"] {
+  cursor: text;
+  border-bottom: 1px dashed var(--accent);
+  padding-bottom: 1px;
+}
+.todo-item.done .todo-text {
+  color: var(--text-done);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-done);
+}
+
+/* Delete button (hover reveal) */
+.todo-delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--prio-high);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: opacity var(--transition), background var(--transition);
+  line-height: 1;
+}
+.todo-item:hover .todo-delete { opacity: 0.6; }
+.todo-delete:hover { opacity: 1 !important; background: rgba(255, 95, 87, 0.15); }
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+#empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-dim);
+  padding-bottom: 20px;
+}
+#empty-state span { font-size: 28px; animation: float 3s ease-in-out infinite; }
+#empty-state p    { font-size: 12px; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ── Add area ────────────────────────────────────────────────────────── */
+#add-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
+}
+
+#priority-picker {
+  display: flex;
+  gap: 4px;
+}
+.prio-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.35;
+  transition: opacity var(--transition), transform var(--transition);
+  line-height: 1;
+}
+.prio-btn:nth-child(1) { color: var(--prio-low); }
+.prio-btn:nth-child(2) { color: var(--prio-med); }
+.prio-btn:nth-child(3) { color: var(--prio-high); }
+.prio-btn:hover { opacity: 0.8; transform: scale(1.3); }
+.prio-btn.active { opacity: 1; transform: scale(1.2); }
+
+#todo-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  min-width: 0;
+}
+#todo-input::placeholder { color: var(--text-dim); }
+#todo-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* ── Context menu ────────────────────────────────────────────────────── */
+#ctx-menu {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(22, 22, 32, 0.96);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  animation: menuPop 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes menuPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+#ctx-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition);
+}
+#ctx-menu button:hover { background: var(--surface-hover); }
+#ctx-delete:hover { color: var(--prio-high); background: rgba(255,95,87,0.12) !important; }
+#ctx-prio-1 { color: var(--prio-low); }
+#ctx-prio-2 { color: var(--prio-med); }
+#ctx-prio-3 { color: var(--prio-high); }
+.ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── Resize handle ───────────────────────────────────────────────────── */
+#app::after {
+  content: '';
+  position: fixed;
+  bottom: 0; right: 0;
+  width: 14px; height: 14px;
+  cursor: se-resize;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
