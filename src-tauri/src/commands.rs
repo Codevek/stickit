@@ -3,7 +3,7 @@
 use crate::db::Db;
 use crate::models::{AppSettings, CreateTodo, Todo, UpdateTodo};
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 pub struct DbState(pub Mutex<Db>);
 
@@ -58,13 +58,14 @@ pub fn save_settings(
     let db = state.0.lock().unwrap();
     db.save_settings(&settings).map_err(|e| e.to_string())?;
 
-    // Apply opacity to widget window immediately
+    // Broadcast settings to the widget window so it applies them immediately
     if let Some(widget) = app.get_webview_window("widget") {
-        let _ = widget.set_ignore_cursor_events(false);
+        let _ = widget.emit("settings-changed", &settings);
     }
 
     Ok(())
 }
+
 
 #[tauri::command]
 pub fn set_setting(key: String, value: String, state: State<'_, DbState>) -> Result<(), String> {
@@ -79,15 +80,58 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("settings") {
         win.show().map_err(|e| e.to_string())?;
         win.set_focus().map_err(|e| e.to_string())?;
-    } else {
-        WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
-            .title("StickIt — Settings")
-            .inner_size(500.0, 620.0)
-            .resizable(false)
-            .always_on_top(false)
-            .decorations(true)
-            .build()
-            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn toggle_settings(app: AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("settings") {
+        if win.is_visible().map_err(|e| e.to_string())? {
+            win.hide().map_err(|e| e.to_string())?;
+        } else {
+            win.show().map_err(|e| e.to_string())?;
+            win.set_focus().map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_widget_focus_mode(app: AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    if let Some(widget) = app.get_webview_window("widget") {
+        if let Ok(hwnd) = widget.hwnd() {
+            unsafe {
+                use windows::Win32::UI::WindowsAndMessaging::{
+                    GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+                };
+                let hw: windows::Win32::Foundation::HWND = std::mem::transmute_copy(&hwnd);
+                let mut style = GetWindowLongPtrW(hw, GWL_EXSTYLE);
+                style &= !(WS_EX_NOACTIVATE.0 as isize);
+                SetWindowLongPtrW(hw, GWL_EXSTYLE, style);
+            }
+        }
+        let _ = widget.set_focus();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_widget_blur_mode(app: AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    if let Some(widget) = app.get_webview_window("widget") {
+        if let Ok(hwnd) = widget.hwnd() {
+            unsafe {
+                use windows::Win32::UI::WindowsAndMessaging::{
+                    GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+                };
+                let hw: windows::Win32::Foundation::HWND = std::mem::transmute_copy(&hwnd);
+                let mut style = GetWindowLongPtrW(hw, GWL_EXSTYLE);
+                style |= WS_EX_NOACTIVATE.0 as isize;
+                SetWindowLongPtrW(hw, GWL_EXSTYLE, style);
+            }
+        }
     }
     Ok(())
 }

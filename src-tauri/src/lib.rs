@@ -38,6 +38,18 @@ pub fn run() {
                         settings.widget_w,
                         settings.widget_h,
                     ));
+                    
+                    #[cfg(target_os = "windows")]
+                    if let Ok(hwnd) = widget.hwnd() {
+                        unsafe {
+                            use windows::Win32::UI::WindowsAndMessaging::{
+                                GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+                            };
+                            let hw: windows::Win32::Foundation::HWND = std::mem::transmute_copy(&hwnd);
+                            let style = GetWindowLongPtrW(hw, GWL_EXSTYLE);
+                            SetWindowLongPtrW(hw, GWL_EXSTYLE, style | (WS_EX_NOACTIVATE.0 as isize));
+                        }
+                    }
                 }
             }
 
@@ -107,12 +119,16 @@ pub fn run() {
             commands::save_settings,
             commands::set_setting,
             commands::open_settings,
+            commands::toggle_settings,
+            commands::set_widget_focus_mode,
+            commands::set_widget_blur_mode,
             commands::save_widget_bounds,
             commands::toggle_always_on_top,
+
         ])
         .on_window_event(|window, event| {
             // Hide to tray instead of quitting when main widget is "closed"
-            if window.label() == "widget" {
+            if window.label() == "widget" || window.label() == "settings" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
                     let _ = window.hide();

@@ -25,6 +25,18 @@
         "shadow": false,
         "x": 40,
         "y": 40
+      },
+      {
+        "label": "settings",
+        "title": "StickIt — Settings",
+        "url": "settings.html",
+        "width": 520,
+        "height": 650,
+        "resizable": false,
+        "alwaysOnTop": false,
+        "decorations": false,
+        "shadow": true,
+        "visible": false
       }
     ],
     "trayIcon": {

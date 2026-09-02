@@ -10,24 +10,25 @@
   <link rel="stylesheet" href="widget.css" />
 </head>
 <body data-theme="dark">
-  <div id="app">
+  <div id="app" data-tauri-drag-region>
 
     <!-- ── Titlebar / Drag Region ──────────────────────────────── -->
     <header id="titlebar" data-tauri-drag-region>
       <div id="title-left" data-tauri-drag-region>
-        <span id="app-icon">📌</span>
-        <span id="app-name" data-tauri-drag-region>StickIt</span>
+        <span id="app-icon"></span>
+        <span id="app-name" data-tauri-drag-region>STICKIT</span>
       </div>
       <div id="title-actions">
         <button id="btn-settings" class="icon-btn" title="Settings">⚙</button>
         <button id="btn-pin" class="icon-btn active" title="Always on top">📌</button>
         <button id="btn-collapse" class="icon-btn" title="Collapse">−</button>
-        <button id="btn-hide" class="icon-btn" title="Hide to tray">×</button>
+        <!-- hide button intentionally removed -->
+
       </div>
     </header>
 
     <!-- ── Body (collapsible) ─────────────────────────────────── -->
-    <div id="widget-body">
+    <div id="widget-body" data-tauri-drag-region>
 
       <!-- Stats bar -->
       <div id="stats-bar">
@@ -36,17 +37,17 @@
       </div>
 
       <!-- Filter tabs -->
-      <div id="filter-tabs">
+      <!-- <div id="filter-tabs">
         <button class="filter-tab active" data-filter="all" id="tab-all">All</button>
         <button class="filter-tab" data-filter="active" id="tab-active">Active</button>
         <button class="filter-tab" data-filter="done" id="tab-done">Done</button>
-      </div>
+      </div> -->
 
       <!-- Todo list -->
-      <ul id="todo-list" role="list"></ul>
+      <ul id="todo-list" role="list" data-tauri-drag-region></ul>
 
       <!-- Empty state -->
-      <div id="empty-state" style="display:none">
+      <div id="empty-state" style="display:none" data-tauri-drag-region>
         <span>✨</span>
         <p>All clear! Add a task.</p>
       </div>

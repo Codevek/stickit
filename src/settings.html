@@ -12,176 +12,207 @@
 
   <div id="settings-app">
 
-    <!-- Sidebar nav -->
-    <nav id="settings-nav">
-      <div id="nav-logo">
-        <span>📌</span>
-        <span>StickIt</span>
+    <!-- ── Custom Titlebar ──────────────────────────────────────────── -->
+    <div id="settings-titlebar" data-tauri-drag-region>
+      <div id="tb-controls">
+        <button class="tb-dot close"  id="btn-win-close"  title="Close"></button>
       </div>
-      <button class="nav-item active" data-section="appearance" id="nav-appearance">
-        <span class="nav-icon">🎨</span> Appearance
-      </button>
-      <button class="nav-item" data-section="behavior" id="nav-behavior">
-        <span class="nav-icon">⚙</span> Behavior
-      </button>
-      <button class="nav-item" data-section="data" id="nav-data">
-        <span class="nav-icon">🗄</span> Data
-      </button>
-      <button class="nav-item" data-section="about" id="nav-about">
-        <span class="nav-icon">ℹ</span> About
-      </button>
-      <div id="nav-version">v0.1.0</div>
-    </nav>
+      <div id="tb-title" data-tauri-drag-region>
+        <span>📌</span>
+        <span>StickIt — Settings</span>
+      </div>
+      <div id="tb-spacer"></div>
+    </div>
 
-    <!-- Content -->
-    <main id="settings-content">
+    <!-- ── Main body: nav + content ────────────────────────────────── -->
+    <div id="settings-body">
 
-      <!-- ── Appearance ────────────────────────────────── -->
-      <section class="settings-section active" id="section-appearance">
-        <h1>Appearance</h1>
+      <!-- Sidebar nav -->
+      <nav id="settings-nav">
+        <button class="nav-item active" data-section="appearance" id="nav-appearance">
+          <span class="nav-icon">🎨</span> Appearance
+        </button>
+        <button class="nav-item" data-section="behavior" id="nav-behavior">
+          <span class="nav-icon">⚙</span> Behavior
+        </button>
+        <button class="nav-item" data-section="data" id="nav-data">
+          <span class="nav-icon">🗄</span> Data
+        </button>
+        <button class="nav-item" data-section="about" id="nav-about">
+          <span class="nav-icon">ℹ</span> About
+        </button>
+        <div id="nav-version">v0.1.0</div>
+      </nav>
 
-        <div class="setting-group">
-          <label class="setting-label">Theme</label>
-          <div class="theme-picker">
-            <button class="theme-btn active" data-theme-val="dark" id="theme-dark">
-              <span class="theme-preview dark-preview"></span>
-              <span>Dark</span>
-            </button>
-            <button class="theme-btn" data-theme-val="light" id="theme-light">
-              <span class="theme-preview light-preview"></span>
-              <span>Light</span>
-            </button>
-          </div>
-        </div>
+      <!-- Content -->
+      <main id="settings-content">
 
-        <div class="setting-group">
-          <label class="setting-label" for="accent-color">
-            Accent Color
-            <span id="accent-preview" class="color-preview"></span>
-          </label>
-          <div class="color-swatches" id="color-swatches">
-            <button class="swatch active" data-color="#7C5CFC" style="background:#7C5CFC" title="Purple"></button>
-            <button class="swatch" data-color="#3DD68C" style="background:#3DD68C" title="Green"></button>
-            <button class="swatch" data-color="#F5A623" style="background:#F5A623" title="Amber"></button>
-            <button class="swatch" data-color="#FF5F57" style="background:#FF5F57" title="Red"></button>
-            <button class="swatch" data-color="#5AC8FA" style="background:#5AC8FA" title="Blue"></button>
-            <button class="swatch" data-color="#FF6EB4" style="background:#FF6EB4" title="Pink"></button>
-            <input type="color" id="accent-color" value="#7C5CFC" class="color-input" title="Custom color" />
-          </div>
-        </div>
+        <!-- ── Appearance ──────────────────────────────────────────── -->
+        <section class="settings-section active" id="section-appearance">
+          <h1>Appearance</h1>
 
-        <div class="setting-group">
-          <label class="setting-label" for="opacity-range">
-            Widget Opacity
-            <span id="opacity-value" class="value-badge">92%</span>
-          </label>
-          <input type="range" id="opacity-range" min="30" max="100" value="92" step="1" class="range-input" />
-        </div>
-
-        <div class="setting-group">
-          <label class="setting-label" for="font-size-range">
-            Font Size
-            <span id="font-size-value" class="value-badge">13px</span>
-          </label>
-          <input type="range" id="font-size-range" min="11" max="18" value="13" step="1" class="range-input" />
-        </div>
-      </section>
-
-      <!-- ── Behavior ──────────────────────────────────── -->
-      <section class="settings-section" id="section-behavior">
-        <h1>Behavior</h1>
-
-        <div class="setting-group">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">Show completed tasks</div>
-              <div class="toggle-desc">Display done tasks with strikethrough in the widget</div>
+          <div class="setting-group">
+            <label class="setting-label">Theme</label>
+            <div class="theme-picker">
+              <button class="theme-btn active" data-theme-val="dark" id="theme-dark">
+                <span class="theme-preview dark-preview"></span>
+                <span>Dark</span>
+              </button>
+              <button class="theme-btn" data-theme-val="light" id="theme-light">
+                <span class="theme-preview light-preview"></span>
+                <span>Light</span>
+              </button>
+              <button class="theme-btn" data-theme-val="custom" id="theme-custom">
+                <span class="theme-preview" id="custom-theme-preview" style="background: linear-gradient(135deg, #FFF3A5 50%, #E6DA94);"></span>
+                <span>Custom</span>
+              </button>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-show-completed" checked />
-              <span class="toggle-track"></span>
+          </div>
+
+          <div class="setting-group" id="custom-theme-colors" style="display: none;">
+            <label class="setting-label" for="custom-bg-color">
+              Custom Theme Color
+              <span id="custom-theme-color-preview" class="color-preview"></span>
             </label>
-          </div>
-        </div>
-
-        <div class="setting-group">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">Start with Windows</div>
-              <div class="toggle-desc">Launch StickIt automatically when Windows starts</div>
+            <div class="color-swatches">
+              <button class="swatch theme-swatch active" data-color="#FFF3A5" style="background:#FFF3A5" title="Yellow"></button>
+              <button class="swatch theme-swatch" data-color="#FFD1E4" style="background:#FFD1E4" title="Pink"></button>
+              <button class="swatch theme-swatch" data-color="#D2EAFF" style="background:#D2EAFF" title="Blue"></button>
+              <button class="swatch theme-swatch" data-color="#D0F5E1" style="background:#D0F5E1" title="Green"></button>
+              <button class="swatch theme-swatch" data-color="#E4D2FF" style="background:#E4D2FF" title="Purple"></button>
+              <input type="color" id="custom-bg-color" value="#FFF3A5" class="color-input" title="Custom color" />
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-auto-launch" />
-              <span class="toggle-track"></span>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="accent-color">
+              Accent Color
+              <span id="accent-preview" class="color-preview"></span>
             </label>
-          </div>
-        </div>
-
-        <div class="setting-group">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-label">Collapse on idle</div>
-              <div class="toggle-desc">Auto-collapse widget after 5 min of inactivity</div>
+            <div class="color-swatches" id="color-swatches">
+              <button class="swatch active" data-color="#7C5CFC" style="background:#7C5CFC" title="Purple"></button>
+              <button class="swatch" data-color="#3DD68C" style="background:#3DD68C" title="Green"></button>
+              <button class="swatch" data-color="#F5A623" style="background:#F5A623" title="Amber"></button>
+              <button class="swatch" data-color="#FF5F57" style="background:#FF5F57" title="Red"></button>
+              <button class="swatch" data-color="#5AC8FA" style="background:#5AC8FA" title="Blue"></button>
+              <button class="swatch" data-color="#FF6EB4" style="background:#FF6EB4" title="Pink"></button>
+              <input type="color" id="accent-color" value="#7C5CFC" class="color-input" title="Custom color" />
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-collapse-idle" />
-              <span class="toggle-track"></span>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="opacity-range">
+              Widget Opacity
+              <span id="opacity-value" class="value-badge">92%</span>
             </label>
+            <input type="range" id="opacity-range" min="30" max="100" value="92" step="1" class="range-input" />
           </div>
-        </div>
-      </section>
 
-      <!-- ── Data ─────────────────────────────────────── -->
-      <section class="settings-section" id="section-data">
-        <h1>Data</h1>
-        <p class="section-desc">Your todos are stored locally in a SQLite database on this PC.</p>
+          <div class="setting-group">
+            <label class="setting-label" for="font-size-range">
+              Font Size
+              <span id="font-size-value" class="value-badge">13px</span>
+            </label>
+            <input type="range" id="font-size-range" min="11" max="24" value="13" step="1" class="range-input" />
+          </div>
+        </section>
 
-        <div class="setting-group">
-          <div id="data-stats" class="data-card">
-            <div class="data-stat">
-              <span id="stat-total" class="stat-num">—</span>
-              <span class="stat-lbl">Total tasks</span>
+        <!-- ── Behavior ────────────────────────────────────────────── -->
+        <section class="settings-section" id="section-behavior">
+          <h1>Behavior</h1>
+
+          <div class="setting-group">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Show completed tasks</div>
+                <div class="toggle-desc">Display done tasks with strikethrough in the widget</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-show-completed" checked />
+                <span class="toggle-track"></span>
+              </label>
             </div>
-            <div class="data-stat">
-              <span id="stat-done" class="stat-num">—</span>
-              <span class="stat-lbl">Completed</span>
+          </div>
+
+          <div class="setting-group">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Start with Windows</div>
+                <div class="toggle-desc">Launch StickIt automatically when Windows starts</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-auto-launch" />
+                <span class="toggle-track"></span>
+              </label>
             </div>
-            <div class="data-stat">
-              <span id="stat-active" class="stat-num">—</span>
-              <span class="stat-lbl">Active</span>
+          </div>
+
+          <div class="setting-group">
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Collapse on idle</div>
+                <div class="toggle-desc">Auto-collapse widget after 5 min of inactivity</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-collapse-idle" />
+                <span class="toggle-track"></span>
+              </label>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="setting-group">
-          <label class="setting-label">Manage</label>
-          <div class="btn-row">
-            <button class="action-btn danger" id="btn-clear-all-done">🗑 Clear all completed</button>
-            <button class="action-btn" id="btn-export">📤 Export JSON</button>
-          </div>
-        </div>
-      </section>
+        <!-- ── Data ───────────────────────────────────────────────── -->
+        <section class="settings-section" id="section-data">
+          <h1>Data</h1>
+          <p class="section-desc">Your todos are stored locally in a SQLite database on this PC.</p>
 
-      <!-- ── About ─────────────────────────────────────── -->
-      <section class="settings-section" id="section-about">
-        <h1>About</h1>
-        <div class="about-card">
-          <div class="about-icon">📌</div>
-          <div class="about-name">StickIt</div>
-          <div class="about-version">Version 0.1.0</div>
-          <div class="about-desc">
-            An ultra-lightweight always-on-top todo widget for Windows.
-            Built with Tauri v2 + Rust. Memory footprint: ~15–30 MB.
+          <div class="setting-group">
+            <div id="data-stats" class="data-card">
+              <div class="data-stat">
+                <span id="stat-total" class="stat-num">—</span>
+                <span class="stat-lbl">Total tasks</span>
+              </div>
+              <div class="data-stat">
+                <span id="stat-done" class="stat-num">—</span>
+                <span class="stat-lbl">Completed</span>
+              </div>
+              <div class="data-stat">
+                <span id="stat-active" class="stat-num">—</span>
+                <span class="stat-lbl">Active</span>
+              </div>
+            </div>
           </div>
-          <div class="about-badges">
-            <span class="badge">Tauri v2</span>
-            <span class="badge">Rust</span>
-            <span class="badge">SQLite</span>
-          </div>
-        </div>
-      </section>
 
-    </main>
+          <div class="setting-group">
+            <label class="setting-label">Manage</label>
+            <div class="btn-row">
+              <button class="action-btn danger" id="btn-clear-all-done">🗑 Clear completed</button>
+              <button class="action-btn" id="btn-export">📤 Export JSON</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── About ──────────────────────────────────────────────── -->
+        <section class="settings-section" id="section-about">
+          <h1>About</h1>
+          <div class="about-card">
+            <div class="about-icon">📌</div>
+            <div class="about-name">StickIt</div>
+            <div class="about-version">Version 0.1.0</div>
+            <div class="about-desc">
+              An ultra-lightweight always-on-top todo widget for Windows.
+              Built with Tauri v2 + Rust. Memory footprint: ~15–30 MB.
+            </div>
+            <div class="about-badges">
+              <span class="badge">Tauri v2</span>
+              <span class="badge">Rust</span>
+              <span class="badge">SQLite</span>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
 
     <!-- Save footer -->
     <footer id="settings-footer">
