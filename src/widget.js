@@ -402,7 +402,10 @@ function bindEvents() {
     if (!$ctxMenu.contains(e.target)) hideCtxMenu();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") hideCtxMenu();
+    if (e.key === "Escape"){
+      hideCtxMenu()
+      
+    };
   });
 
   // Persist position on move
@@ -424,6 +427,7 @@ window.addEventListener("click", () => {
 
 window.addEventListener("blur", () => {
   document.getElementById("app").classList.remove("focused");
+  cancelEdit()
 });
 
 // ── Apply settings to this window ─────────────────────────────────────────
