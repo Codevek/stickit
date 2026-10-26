@@ -1,6 +1,6 @@
 [package]
 name = "stickit"
-version = "0.1.0"
+version = "0.1.1"
 description = "StickIt - Always-on-top todo widget"
 authors = ["StickIt"]
 edition = "2021"

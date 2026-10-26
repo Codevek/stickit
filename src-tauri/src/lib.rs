@@ -17,6 +17,15 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            let app_icon = app
+                .default_window_icon()
+                .expect("missing default app icon")
+                .clone();
+
+            for window in app.webview_windows().values() {
+                window.set_icon(app_icon.clone())?;
+            }
+
             // ── Init DB ──────────────────────────────────────────────────
             let app_data_dir = app
                 .path()
@@ -69,7 +78,7 @@ pub fn run() {
                 .build()?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(app_icon)
                 .menu(&menu)
                 .tooltip("StickIt")
                 .on_menu_event(|app, event| match event.id().as_ref() {

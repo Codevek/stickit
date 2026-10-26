@@ -418,6 +418,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+.about-logo { width: 180px; height: auto; margin-bottom: 8px; }
 .about-icon    { font-size: 44px; margin-bottom: 8px; animation: float 3s ease-in-out infinite; }
 .about-name    { font-size: 20px; font-weight: 700; }
 .about-version { font-size: 12px; color: var(--text-dim); }

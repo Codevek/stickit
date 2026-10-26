@@ -26,6 +26,18 @@
   text-align: center;
 }
 
+.brand-page {
+  align-items: center;
+  min-height: 70vh;
+  padding: 10vh 24px 0;
+}
+
+.brand-logo {
+  width: min(70vw, 340px);
+  height: auto;
+  padding: 0;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

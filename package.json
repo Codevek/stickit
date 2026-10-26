@@ -1,10 +1,10 @@
 {
   "name": "stickit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Always-on-top todo widget",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build",
+    "build": "node scripts/build.js",
     "tauri": "tauri"
   },
   "devDependencies": {
