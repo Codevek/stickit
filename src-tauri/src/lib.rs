@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, RunEvent,
+    Manager,
 };
 
 pub fn run() {
@@ -64,6 +64,16 @@ pub fn run() {
 
             app.manage(DbState(Mutex::new(db)));
 
+            // ── Sync auto-launch: registry → DB on startup ───────────────
+            #[cfg(target_os = "windows")]
+            {
+                let db_state = app.state::<DbState>();
+                let db = db_state.0.lock().unwrap();
+                if let Ok(actual) = commands::is_auto_launch_enabled_win() {
+                    let _ = db.set_setting("auto_launch", if actual { "true" } else { "false" });
+                }
+            }
+
             // ── System Tray ──────────────────────────────────────────────
             let show_item = MenuItemBuilder::with_id("show_widget", "Show Widget").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "Settings…").build(app)?;
@@ -92,7 +102,7 @@ pub fn run() {
                         let _ = commands::open_settings(app.clone());
                     }
                     "quit" => {
-                        app.exit(0);
+                        std::process::exit(0);
                     }
                     _ => {}
                 })
@@ -133,7 +143,8 @@ pub fn run() {
             commands::set_widget_blur_mode,
             commands::save_widget_bounds,
             commands::toggle_always_on_top,
-
+            commands::set_auto_launch,
+            commands::get_auto_launch,
         ])
         .on_window_event(|window, event| {
             // Hide to tray instead of quitting when main widget is "closed"
@@ -146,9 +157,5 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, event| {
-            if let RunEvent::ExitRequested { api, .. } = event {
-                api.prevent_exit();
-            }
-        });
+        .run(|_app, _event| {});
 }

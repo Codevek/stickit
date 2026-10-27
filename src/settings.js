@@ -53,6 +53,12 @@ async function init() {
     settings = await invoke('get_settings');
     applySettings(settings);
     await loadDataStats();
+    // Sync the auto-launch toggle with the actual Windows registry state
+    try {
+      const actualAutoLaunch = await invoke('get_auto_launch');
+      $toggleAutoLaunch.checked = actualAutoLaunch;
+      if (settings) settings.auto_launch = actualAutoLaunch;
+    } catch (e) { /* non-Windows or registry error, keep DB value */ }
   } catch (e) { console.error('init settings:', e); }
   bindEvents();
 }
@@ -240,9 +246,15 @@ function bindEvents() {
     livePreview({ font_size: parseInt(sz) });
   });
 
-  // Toggles
-  [$toggleCompleted, $toggleAutoLaunch, $toggleCollapseIdle].forEach(t => {
+  // Toggles — auto-launch applies immediately; others need Save
+  [$toggleCompleted, $toggleCollapseIdle].forEach(t => {
     t.addEventListener('change', markDirty);
+  });
+  $toggleAutoLaunch.addEventListener('change', async () => {
+    markDirty();
+    try {
+      await invoke('set_auto_launch', { enabled: $toggleAutoLaunch.checked });
+    } catch (e) { console.error('set_auto_launch:', e); }
   });
 
   // Save

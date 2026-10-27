@@ -1,9 +1,16 @@
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 
 const root = path.resolve(__dirname, "..");
 const env = { ...process.env };
+
+// Ensure ~/.cargo/bin is in PATH so the Tauri CLI binary can find cargo
+const cargoBin = path.join(os.homedir(), ".cargo", "bin");
+if (fs.existsSync(cargoBin) && !(env.PATH || "").includes(cargoBin)) {
+  env.PATH = `${cargoBin}${path.delimiter}${env.PATH || ""}`;
+}
 
 if (process.platform === "win32") {
   const cargoConfig = path.join(root, "src-tauri", ".cargo", "config.toml");

@@ -284,6 +284,17 @@ body {
 .icon-btn.active {
   color: var(--accent);
 }
+#btn-sync.spinning {
+  animation: spinSync 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes spinSync {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 .icon-btn.accent {
   background: var(--accent);
   color: #fff;

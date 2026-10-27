@@ -25,6 +25,7 @@ const $empty = document.getElementById("empty-state");
 const $body = document.getElementById("widget-body");
 const $btnCollapse = document.getElementById("btn-collapse");
 const $btnPin = document.getElementById("btn-pin");
+const $btnSync = document.getElementById("btn-sync");
 const $btnSettings = document.getElementById("btn-settings");
 const $ctxMenu = document.getElementById("ctx-menu");
 const prioBtns = document.querySelectorAll(".prio-btn");
@@ -47,13 +48,33 @@ async function loadSettings() {
 }
 
 // ── Todos ──────────────────────────────────────────────────────────────────
+function sortTodos(arr) {
+  return [...arr].sort((a, b) => {
+    // 1. Uncompleted tasks before completed tasks
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    // 2. Higher priority first (3 = High, 2 = Medium, 1 = Low)
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    // 3. For same priority, earlier created first
+    return (a.created_at || "").localeCompare(b.created_at || "");
+  });
+}
+
 async function loadTodos() {
   try {
-    todos = await invoke("get_todos");
+    const raw = await invoke("get_todos");
+    todos = sortTodos(raw);
     render();
   } catch (e) {
     console.error("loadTodos:", e);
   }
+}
+
+async function syncTasks() {
+  if ($btnSync) $btnSync.classList.add("spinning");
+  await loadTodos();
+  setTimeout(() => {
+    if ($btnSync) $btnSync.classList.remove("spinning");
+  }, 600);
 }
 
 function getVisible() {
@@ -158,6 +179,7 @@ async function finishEdit() {
     });
     const idx = todos.findIndex((t) => t.id === editingTodo.id);
     if (idx !== -1) todos[idx] = updated;
+    todos = sortTodos(todos);
     render();
   } catch (e) { console.error("finishEdit:", e); }
   cancelEdit();
@@ -176,6 +198,7 @@ async function toggleDone(id, done) {
     const updated = await invoke("update_todo", { input: { id, done } });
     const idx = todos.findIndex((t) => t.id === id);
     if (idx !== -1) todos[idx] = updated;
+    todos = sortTodos(todos);
     render();
   } catch (e) {
     console.error("toggleDone:", e);
@@ -196,7 +219,7 @@ async function addTodo() {
     const todo = await invoke("create_todo", {
       input: { title, priority: selectedPriority },
     });
-    todos.unshift(todo);
+    todos = sortTodos([...todos, todo]);
     $input.value = "";
     filter = "all";
     filterTabs.forEach((t) =>
@@ -266,6 +289,7 @@ async function ctxSetPriority(prio) {
     });
     const idx = todos.findIndex((t) => t.id === ctxTodoId);
     if (idx !== -1) todos[idx] = updated;
+    todos = sortTodos(todos);
     render();
   } catch (e) {
     console.error("ctxSetPriority:", e);
@@ -379,6 +403,7 @@ function bindEvents() {
   });
 
   // Header buttons
+  if ($btnSync) $btnSync.addEventListener("click", syncTasks);
   if ($btnCollapse) $btnCollapse.addEventListener("click", toggleCollapse);
   if ($btnPin) $btnPin.addEventListener("click", togglePin);
   if ($btnSettings) $btnSettings.addEventListener("click", openSettings);
